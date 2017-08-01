@@ -203,8 +203,6 @@ void reset()
 					function:main()
 					version : 2.0
 ***************************************************************************/
-#define PATH      "/etc/cam/"
-#define LOG_FILE  "/etc/cam/update.log"
 
 int main(int argc, char* argv[])
 {
@@ -250,19 +248,19 @@ int main(int argc, char* argv[])
 	strcpy(logfile, argv[2]);
 	strcat(logfile, "update_log.txt");
 
-    fd = open (logfile, O_RDONLY);
-	if (fd > 0)
-	{
-		fprintf(stderr, "had updated, exit\n");
-		close(fd);
-		return 0;
-	}
-	fprintf(stderr, "open logfile failed: %s\n", strerror(errno));
-
-	strcpy(path, argv[1]);
-	DIR           *pDir = NULL;
+ 	DIR           *pDir = NULL;
 	struct dirent *ent;
 
+	strcpy(path, argv[2]);
+	pDir = opendir(path);	
+	while ((ent = readdir(pDir)) != NULL) {
+		if (strstr(ent->d_name, "update")) {
+			fprintf(stderr, "had updated, exit\n");
+			return 0;
+		} 
+	}
+
+    strcpy(path, argv[1]);
 	pDir = opendir(path);	
 	while ((ent = readdir(pDir)) != NULL) {
 		if (strstr(ent->d_name, "firm")) {
