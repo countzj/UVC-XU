@@ -322,7 +322,7 @@ int main(int argc, char* argv[])
 
 	if(sizeof(bin_file_hdr)!=header.hdr_len){
 		fprintf(stderr, "sizeof(header) does not equal header.hdr_len\n");
-		goto fail1;
+		goto fail0;
 	}
 	
 	buffer_srec = (uint8_t *) malloc(length_of_srec);
