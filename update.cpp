@@ -291,11 +291,11 @@ int main(int argc, char* argv[])
 	FILE* tFile;
 	if((srec[strlen(srec)-1]!= 'n') && (srec[strlen(srec)-2]!= 'i') && (srec[strlen(srec)-3]!= 'b')){   
 			fprintf(stderr,"%s is not a .bin file\n", srec);
-			goto fail1;
+			goto fail0;
 	 }else{
 		if ((tFile=fopen(srec, "rb"))==NULL){
 			fprintf(stderr,"Unable to open file %s, %s\n", srec, strerror(errno));
-			goto fail1;
+			goto fail0;
 		}else{
 			fprintf(stderr,"Opened file %s\n", srec);	 
 		}
@@ -490,6 +490,7 @@ int main(int argc, char* argv[])
 	close(video_fd);
 	fail1:
 	fclose(tFile);
+	fail0:
 	free(buffer_srec);
 	return -1;
 }
