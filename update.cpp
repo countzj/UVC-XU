@@ -206,8 +206,9 @@ void reset()
 
 int main(int argc, char* argv[])
 {
+	int ret = 1;
 	int device = 0;
-	char *srec;
+	char *srec=NULL;
 
 	FILE *pFile=NULL;
 	uint8_t *buffer=NULL;
@@ -235,7 +236,19 @@ int main(int argc, char* argv[])
 	uint8_t partition;
     MD5 md5;
 
+	bin_file_hdr header;
+	char signature[MAX_SIZE_SIG+1];
+	char svn_rev[MAX_SIZE_SVN_REV+1];
+	char date[MAX_SIZE_DATE+1];
+	FILE* tFile;
+
 	fprintf(stderr, "***enter cam update process***\n");
+
+	if (argc != 3){
+		fprintf(stderr, "Incorrect number of arguments \n");
+		usage();
+		return 1;
+	}
 
     video_fd = open("/dev/video0", O_RDWR | O_NONBLOCK);
     if (video_fd == -1)
@@ -244,12 +257,6 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Opening Video device failed: %s \n",strerror(errno));
         return 1;
     }
-
-	if (argc != 3){
-		fprintf(stderr, "Incorrect number of arguments \n");
-		usage();
-		return 1;
-	}
 
 	char path[128] = {'\0'};
 	char logfile[128] = {'\0'};
@@ -265,7 +272,8 @@ int main(int argc, char* argv[])
 	while ((ent = readdir(pDir)) != NULL) {
 		if (strstr(ent->d_name, "update")) {
 			fprintf(stderr, "had updated, exit\n");
-			return 0;
+            ret = 0;
+			goto fail;
 		} 
 	}
 
@@ -280,25 +288,21 @@ int main(int argc, char* argv[])
 
 	if (strcmp(path, argv[1]) <= 0){
 		fprintf(stderr, "not found update file\n");
-		return 0;
+        ret = 0;
+		goto fail;
 	}
 	
 	fprintf(stderr, "have found update file %s\n", path);
 
 	srec = path;
 
-	bin_file_hdr header;
-	char signature[MAX_SIZE_SIG+1];
-	char svn_rev[MAX_SIZE_SVN_REV+1];
-	char date[MAX_SIZE_DATE+1];
-	FILE* tFile;
 	if((srec[strlen(srec)-1]!= 'n') && (srec[strlen(srec)-2]!= 'i') && (srec[strlen(srec)-3]!= 'b')){   
 			fprintf(stderr,"%s is not a .bin file\n", srec);
-			return 1;
+			goto fail;
 	 }else{
 		if ((tFile=fopen(srec, "rb"))==NULL){
 			fprintf(stderr,"Unable to open file %s, %s\n", srec, strerror(errno));
-			return 1;
+			goto fail;
 		}else{
 			fprintf(stderr,"Opened file %s\n", srec);	 
 		}
@@ -386,7 +390,7 @@ int main(int argc, char* argv[])
 	buffer = (uint8_t*)malloc(1024);
 	if (buffer == NULL){ 
 		fprintf(stderr, "Memory Error. Could not allocate buffer size\n"); 
-		goto fail2;
+		goto fail1;
 	}
 
 	uint8_t * buffer_zero;
@@ -471,23 +475,24 @@ int main(int argc, char* argv[])
         fprintf(stderr,"Unable to automatically reset system. Manual reset advised. \n");
 	}
 
+	fprintf(stderr, "***update finish***\n");
     fd = open (logfile, O_CREAT | O_TRUNC | O_RDWR, 0666);
 	if (fd < 0)
 	{
 		fprintf(stderr, "creat update_log.txt failure: %s \n", strerror(errno));
-		return 0;
+		goto fail3;
 	}
+	fprintf(stderr, "create log file success\n");	
 	close(fd);
-	fprintf(stderr, "***update finish***\n");
-	return 0;
+	ret = 0;
 
     fail3:
 	free(buffer);
-	fail2:
-	close(video_fd);
 	fail1:
 	free(buffer_srec);
 	fail0:
 	fclose(tFile);
-	return 1;
+	fail:
+	close(video_fd);
+	return ret;
 }
