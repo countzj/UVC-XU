@@ -210,7 +210,8 @@ int main(int argc, char* argv[])
 	char *srec;
 
 	FILE *pFile=NULL;
-	uint8_t *buffer;
+	uint8_t *buffer=NULL;
+	uint8_t *buffer_srec=NULL;
 	size_t result;
 
 	uint8_t buf_control1[13];
@@ -235,6 +236,14 @@ int main(int argc, char* argv[])
     MD5 md5;
 
 	fprintf(stderr, "***enter cam update process***\n");
+
+    video_fd = open("/dev/video0", O_RDWR | O_NONBLOCK);
+    if (video_fd == -1)
+    {
+        // couldn't find capture device
+        fprintf(stderr, "Opening Video device failed: %s \n",strerror(errno));
+        return 1;
+    }
 
 	if (argc != 3){
 		fprintf(stderr, "Incorrect number of arguments \n");
@@ -271,18 +280,12 @@ int main(int argc, char* argv[])
 
 	if (strcmp(path, argv[1]) <= 0){
 		fprintf(stderr, "not found update file\n");
-		return 1;
+		return 0;
 	}
 	
 	fprintf(stderr, "have found update file %s\n", path);
 
 	srec = path;
-	uint8_t *buffer_srec = (uint8_t *) malloc(length_of_srec);
-	if(buffer_srec==NULL){
-		fprintf(stderr,"Memory Error. Could not allocate buffer size\n");
-		return 1;
-	}
-	memset(buffer_srec, 0xFF, length_of_srec);
 
 	bin_file_hdr header;
 	char signature[MAX_SIZE_SIG+1];
@@ -291,11 +294,11 @@ int main(int argc, char* argv[])
 	FILE* tFile;
 	if((srec[strlen(srec)-1]!= 'n') && (srec[strlen(srec)-2]!= 'i') && (srec[strlen(srec)-3]!= 'b')){   
 			fprintf(stderr,"%s is not a .bin file\n", srec);
-			goto fail0;
+			return 1;
 	 }else{
 		if ((tFile=fopen(srec, "rb"))==NULL){
 			fprintf(stderr,"Unable to open file %s, %s\n", srec, strerror(errno));
-			goto fail0;
+			return 1;
 		}else{
 			fprintf(stderr,"Opened file %s\n", srec);	 
 		}
@@ -322,10 +325,12 @@ int main(int argc, char* argv[])
 		goto fail1;
 	}
 	
-	/*uint8_t buffer_srec2[262144];
-	for(int i = 0; i<srec_size; i++){
-		buffer_srec2[i]=0xFF;
-	}*/
+	buffer_srec = (uint8_t *) malloc(length_of_srec);
+	if(buffer_srec==NULL){
+		fprintf(stderr,"Memory Error. Could not allocate buffer size\n");
+		goto fail0;
+	}
+	memset(buffer_srec, 0xFF, length_of_srec);
 	
 	data_length = lSize - header.hdr_len;
 	fread(buffer_srec, data_length, 1, tFile);
@@ -341,14 +346,6 @@ int main(int argc, char* argv[])
 	fprintf(stderr, "Set bin size: %d\n", length_of_srec);
 
 	fclose(tFile);
-
-    video_fd = open("/dev/video0", O_RDWR | O_NONBLOCK);
-    if (video_fd == -1)
-    {
-        // couldn't find capture device
-        fprintf(stderr, "Opening Video device failed: %s \n",strerror(errno));
-        goto fail1;
-    }
 
 	partition = 0x00;
 	if(first_address==0x000000){
@@ -489,8 +486,8 @@ int main(int argc, char* argv[])
 	fail2:
 	close(video_fd);
 	fail1:
-	fclose(tFile);
-	fail0:
 	free(buffer_srec);
-	return -1;
+	fail0:
+	fclose(tFile);
+	return 1;
 }
