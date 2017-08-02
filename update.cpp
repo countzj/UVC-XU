@@ -250,12 +250,17 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-    video_fd = open("/dev/video0", O_RDWR | O_NONBLOCK);
-    if (video_fd == -1)
+    for (;;)
     {
-        // couldn't find capture device
-        fprintf(stderr, "Opening Video device failed: %s \n",strerror(errno));
-        return 1;
+	    video_fd = open("/dev/video0", O_RDWR | O_NONBLOCK);
+	    if (video_fd == -1)
+	    {
+	        // couldn't find capture device
+	        fprintf(stderr, "Opening Video device failed: %s \n",strerror(errno));
+	        sleep(1);
+			continue;
+	    }
+		break;
     }
 
 	char path[128] = {'\0'};
